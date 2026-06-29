@@ -3,118 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data-Insight: 智能数据流水线</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <title>Data-Insight AI Agent</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --text-accent: #58a6ff;
+            --btn-bg: #238636;
+            --btn-hover: #2ea043;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex: 1;
+        }
+        .header {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .header h1 { margin: 0 0 10px 0; color: var(--text-accent); font-size: 24px; }
+        .header p { margin: 0; font-size: 14px; color: #8b949e; }
+        
+        .terminal {
+            background-color: #010409;
+            flex: 1;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+            font-size: 13.5px;
+            overflow-y: auto;
+            line-height: 1.6;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .log-entry { margin-bottom: 8px; border-bottom: 1px dashed #30363d; padding-bottom: 8px; }
+        .log-time { color: #8b949e; margin-right: 10px; }
+        
+        /* 代码块专属样式，模仿 IDE 效果 */
+        .code-block {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            max-height: 400px; /* 限制代码块高度，支持内部滚动 */
+            overflow-y: auto;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .code-block code { white-space: pre-wrap; }
+
+        .controls {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .input-group { display: flex; gap: 10px; align-items: center; }
+        input[type="text"] {
+            flex: 1;
+            background-color: #0d1117;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 6px;
+        }
+        input[type="text"]:focus { outline: none; border-color: var(--text-accent); }
+        button {
+            background-color: var(--btn-bg);
+            color: #ffffff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background-color: var(--btn-hover); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        #view-report-btn { background-color: var(--text-accent); color: #000; display: none; }
+    </style>
 </head>
-<body class="bg-slate-100 font-sans p-6">
+<body>
 
-<div class="max-w-7xl mx-auto">
-    <header class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex justify-between items-center">
-        <div>
-            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Data-Insight AI Agent</h1>
-            <p class="text-gray-500 text-sm mt-1">CrewAI + Qwen3.7 + PostgreSQL 自动化分析系统</p>
-        </div>
-        <div class="flex gap-4">
-            <button onclick="importDB()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow font-medium transition">
-                1. 将 CSV 导入 PostgreSQL
-            </button>
-            <button onclick="runAI()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow font-medium transition flex items-center">
-                2. 运行 AI 多智能体 (TDD 生成)
-            </button>
-            <button onclick="loadReport()" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow font-medium transition">
-                3. 查看数据看板
-            </button>
-        </div>
-    </header>
-
-    <div class="bg-gray-900 rounded-xl p-4 mb-8 shadow-inner text-green-400 font-mono text-sm h-48 overflow-y-auto" id="console">
-        系统初始化完毕。等待操作...
+<div class="container">
+    <div class="header">
+        <h1>Data-Insight AI (终端动态推流模式)</h1>
+        <p>基于 CrewAI TDD。您将在此面板实时看到 AI 生成的代码和思考过程。</p>
     </div>
 
-    <div id="dashboard" class="hidden">
-        <div class="grid grid-cols-4 gap-6 mb-6" id="overview-cards"></div>
-        
-        <div class="grid grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm">
-                <h3 class="text-lg font-bold text-gray-700 mb-4 border-l-4 border-blue-500 pl-3">各产品域 PV 排行</h3>
-                <div id="pvChart" style="height: 350px;"></div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm">
-                <h3 class="text-lg font-bold text-gray-700 mb-4 border-l-4 border-indigo-500 pl-3">各产品域 用户分层</h3>
-                <div id="layerChart" style="height: 350px;"></div>
-            </div>
+    <div class="terminal" id="console">
+        <div class="log-entry"><span class="log-time">[System]</span> 系统初始化完毕，等待输入分析指令或上传数据...</div>
+    </div>
+
+    <div class="controls">
+        <div class="input-group">
+            <input type="file" id="file-upload" accept=".xlsx, .xls, .csv">
+        </div>
+        <div class="input-group">
+            <input type="text" id="user-prompt" placeholder="例如：分析各产品域的 PV 排行和用户分层，生成一个炫酷的暗色系看板">
+            <button id="start-btn" onclick="startAiProcess()">🚀 开始智能分析</button>
+            <button id="view-report-btn" onclick="openReport()">📊 查看动态生成报告</button>
         </div>
     </div>
 </div>
 
 <script>
-    function logMessage(msg) {
-        const consoleEl = document.getElementById('console');
-        consoleEl.innerHTML += `<div>> ${new Date().toLocaleTimeString()}: ${msg}</div>`;
+    let eventSource;
+    const consoleEl = document.getElementById('console');
+    
+    function logMsg(htmlContent) {
+        const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        // 允许直接渲染后端传来的 HTML (包含 <pre><code> 代码块)
+        div.innerHTML = `<span class="log-time">[${time}]</span> ${htmlContent}`;
+        consoleEl.appendChild(div);
         consoleEl.scrollTop = consoleEl.scrollHeight;
     }
 
-    async function importDB() {
-        logMessage("正在扫描 data/ 目录并自动建表导入 PostgreSQL... 请稍候。");
-        const res = await fetch('/api/import-db', { method: 'POST' });
-        const data = await res.json();
-        logMessage(data.message);
-    }
+    async function startAiProcess() {
+        const prompt = document.getElementById('user-prompt').value.trim();
+        const fileInput = document.getElementById('file-upload').files[0];
+        
+        if (!prompt && !fileInput) { alert("请提供分析需求或数据文件！"); return; }
 
-    async function runAI() {
-        logMessage("唤醒 Qwen3.7-plus 智能体团队。正在生成代码、访问数据库并运行 TDD 测试... 这需要几十秒钟。");
-        const res = await fetch('/api/run-ai', { method: 'POST' });
-        const data = await res.json();
-        logMessage(data.status === 'success' ? "✅ " + data.message : "❌ " + data.message);
-    }
+        document.getElementById('start-btn').disabled = true;
+        document.getElementById('view-report-btn').style.display = 'none';
+        consoleEl.innerHTML = ''; 
+        logMsg("🚀 启动 Data-Insight 智能流水线...");
 
-    async function loadReport() {
-        logMessage("正在拉取 report_data.json 渲染大屏...");
-        const res = await fetch('/api/report-data');
-        const data = await res.json();
-
-        if (data.error) {
-            logMessage("❌ " + data.error);
-            return;
+        let uploadedFilename = "";
+        if (fileInput) {
+            logMsg("正在上传数据文件...");
+            const formData = new FormData();
+            formData.append("file", fileInput);
+            const res = await fetch("/api/upload", { method: "POST", body: formData });
+            uploadedFilename = (await res.json()).filename;
+            logMsg(`✅ 上传成功: ${uploadedFilename}`);
         }
 
-        document.getElementById('dashboard').classList.remove('hidden');
+        if (eventSource) eventSource.close();
+        eventSource = new EventSource("/api/stream");
+        
+        eventSource.onmessage = function(event) {
+            try {
+                // 解析 JSON Payload
+                const data = JSON.parse(event.data);
+                const msg = data.message;
+                
+                // 忽略纯 Heartbeat 以免刷屏
+                if (msg.includes("[Heartbeat]")) return; 
+                
+                logMsg(msg);
 
-        // 渲染概览卡片
-        const overviewHtml = `
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div class="text-gray-500 text-sm">总计 DAU</div><div class="text-3xl font-black text-gray-800 mt-1">${data.overview.dau}</div></div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div class="text-gray-500 text-sm">总计 UV</div><div class="text-3xl font-black text-gray-800 mt-1">${data.overview.uv}</div></div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div class="text-gray-500 text-sm">总计 PV</div><div class="text-3xl font-black text-gray-800 mt-1">${data.overview.pv}</div></div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div class="text-gray-500 text-sm">平均停留时长</div><div class="text-3xl font-black text-blue-600 mt-1">${data.overview.avg_duration} <span class="text-base font-normal">秒</span></div></div>
-        `;
-        document.getElementById('overview-cards').innerHTML = overviewHtml;
+                if (msg.includes("🎉 全流程执行成功") || msg.includes("❌ 系统崩溃")) {
+                    eventSource.close();
+                    document.getElementById('start-btn').disabled = false;
+                    if(msg.includes("🎉")) document.getElementById('view-report-btn').style.display = 'block';
+                }
+            } catch (e) {
+                console.error("解析流数据失败", e);
+            }
+        };
 
-        // 渲染 PV 排行柱状图
-        const pvChart = echarts.init(document.getElementById('pvChart'));
-        const pages = data.pv_ranks.map(item => item.page_name.substring(0, 8)); // 截断长名称
-        const pvs = data.pv_ranks.map(item => item.pv);
-        pvChart.setOption({
-            tooltip: {},
-            xAxis: { type: 'category', data: pages, axisLabel: { rotate: 30 } },
-            yAxis: { type: 'value' },
-            series: [{ type: 'bar', data: pvs, itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] } }]
+        fetch("/api/run-ai-dynamic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: prompt, filename: uploadedFilename })
         });
-
-        // 渲染用户分层饼图
-        const layerChart = echarts.init(document.getElementById('layerChart'));
-        const layerData = data.user_layers.map(item => ({ name: `[${item.domain}] ${item.layer}`, value: item.user_count }));
-        layerChart.setOption({
-            tooltip: { trigger: 'item' },
-            series: [{
-                type: 'pie', radius: ['40%', '70%'],
-                itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-                data: layerData
-            }]
-        });
-
-        logMessage("✅ 数据看板渲染完成！");
     }
+
+    function openReport() { window.open("/api/view-report", "_blank"); }
 </script>
 </body>
 </html>
