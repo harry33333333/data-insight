@@ -1,0 +1,18 @@
+# === 1. 核心 AI 框架 (严格对齐 pyproject.toml) ===
+crewai>=1.15.1
+crewai-tools>=1.15.1
+crewai-files>=1.15.1
+
+# === 2. Web 后端与渲染 ===
+fastapi
+uvicorn
+jinja2
+
+# === 3. 数据与数据库处理 ===
+pandas
+sqlalchemy
+psycopg2-binary
+
+# === 4. 测试与环境 ===
+pytest
+python-dotenv
